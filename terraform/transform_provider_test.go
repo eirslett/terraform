@@ -62,6 +62,36 @@ func TestCloseProviderTransformer(t *testing.T) {
 	}
 }
 
+func TestCloseProviderTransformer_withTargets(t *testing.T) {
+	mod := testModule(t, "transform-provider-basic")
+
+	g := Graph{Path: RootModulePath}
+	transforms := []GraphTransformer{
+		&ConfigTransformer{Module: mod},
+		&ProviderTransformer{},
+		&CloseProviderTransformer{},
+		&TargetsTransformer{
+			Targets: []string{"something.else"},
+		},
+	}
+
+	for _, tr := range transforms {
+		if err := tr.Transform(&g); err != nil {
+			t.Fatalf("err: %s", err)
+		}
+	}
+
+	actual := strings.TrimSpace(g.String())
+	expected := strings.TrimSpace(`
+provider.aws
+provider.aws (close)
+  provider.aws
+	`)
+	if actual != expected {
+		t.Fatalf("expected:%s\n\ngot:\n\n%s", expected, actual)
+	}
+}
+
 func TestMissingProviderTransformer(t *testing.T) {
 	mod := testModule(t, "transform-provider-missing")
 
